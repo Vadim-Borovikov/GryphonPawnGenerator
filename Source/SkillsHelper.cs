@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using RimWorld;
-using Verse;
 
 namespace GryphonPawnGenerator
 {
@@ -15,64 +14,56 @@ namespace GryphonPawnGenerator
             Passion = 2
         }
 
-        public static void RegisterSkillIfBlocked(PawnInfo info, string trait)
+        public static void RegisterSkillIfBlocked(Dictionary<string, State> skills, string trait)
         {
             if (SkillBlockingTraits.ContainsKey(trait))
             {
                 string skill = SkillBlockingTraits[trait];
-                info.Skills[skill] = State.Blocked;
+                skills[skill] = State.Blocked;
             }
         }
 
-        public static void FillSkills(Pawn pawn, PawnInfo info)
+        public static void FillSkills(IEnumerable<SkillRecord> source, Dictionary<string, State> target)
         {
-            List<SkillRecord> proficientIn = pawn.skills.skills
-                                                 .Where(s => info.Skills[s.def.defName] != State.Blocked)
-                                                 .Where(s => s.Level >= MinProficiencySkillLevel).ToList();
+            List<SkillRecord> proficientIn = source.Where(s => target[s.def.defName] != State.Blocked)
+                                                   .Where(s => s.Level >= MinProficiencySkillLevel).ToList();
             foreach (SkillRecord skill in proficientIn)
             {
                 string name = skill.def.defName;
-                info.Skills[name] = State.Proficiency;
+                target[name] = State.Proficiency;
             }
 
             List<SkillRecord> passionateAbout = proficientIn.Where(s => s.passion != Passion.None).ToList();
             foreach (SkillRecord skill in passionateAbout)
             {
                 string name = skill.def.defName;
-                info.Skills[name] = State.Passion;
+                target[name] = State.Passion;
             }
         }
 
-        public static string GetTeamInfo()
+        public static int GetProficienciesAmount(Dictionary<string, State> skills)
         {
-            GroupInfo best = GetBestTeam(Find.GameInitData.startingAndOptionalPawns);
-
-            return best is null
-                ? "No team found"
-                : $"Best team with {best.Competency:0%}: {best.Names}";
+            return skills.Values.Count(s => s > State.None);
         }
 
-        private static GroupInfo GetBestTeam(IReadOnlyCollection<Pawn> set)
+        public static int GetPassionsAmount(Dictionary<string, State> skills)
         {
-            if (set.Count < TeamSize)
-            {
-                return null;
-            }
+            return skills.Values.Count(s => s == State.Passion);
+        }
 
-            GroupInfo result = GroupInfo.GetOrCreate(set.Take(TeamSize).ToList());
-            if (set.Count == TeamSize)
+        public static Dictionary<string, bool> GetPairSkills(Dictionary<string, State> skills1,
+            Dictionary<string, State> skills2)
+        {
+            Dictionary<string, bool> result = new Dictionary<string, bool>();
+            foreach (string skill in skills1.Keys)
             {
-                return result;
+                result[skill] = (skills1[skill] > State.None) &&
+                                (skills2[skill] > State.None) &&
+                                (skills1[skill] is State.Passion || skills2[skill] is State.Passion);
             }
-
-            // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (Pawn candidate in set.Skip(TeamSize))
-            {
-                result = result.Try(candidate);
-            }
-
             return result;
         }
+
 
         private static readonly Dictionary<string, string> SkillBlockingTraits = new Dictionary<string, string>
         {
@@ -85,6 +76,5 @@ namespace GryphonPawnGenerator
         };
 
         private const int MinProficiencySkillLevel = 3;
-        private const int TeamSize = 3;
     }
 }

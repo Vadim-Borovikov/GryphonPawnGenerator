@@ -77,7 +77,7 @@ namespace GryphonPawnGenerator
                     return;
                 }
 
-                SkillsHelper.RegisterSkillIfBlocked(info, traitName);
+                SkillsHelper.RegisterSkillIfBlocked(info.Skills, traitName);
             }
         }
 
@@ -86,15 +86,15 @@ namespace GryphonPawnGenerator
         private static string CheckSkills(Pawn pawn)
         {
             PawnInfo info = PawnInfo.GetOrCreate(pawn);
-            SkillsHelper.FillSkills(pawn, info);
+            SkillsHelper.FillSkills(pawn.skills.skills, info.Skills);
 
-            int proficiencies = info.Skills.Values.Count(s => s != SkillsHelper.State.None);
+            int proficiencies = SkillsHelper.GetProficienciesAmount(info.Skills);
             if (proficiencies < MinProficiencies)
             {
                 return $"skills ({proficiencies} proficiencies only)";
             }
 
-            int passions = info.Skills.Values.Count(s => s == SkillsHelper.State.Passion);
+            int passions = SkillsHelper.GetPassionsAmount(info.Skills);
             if (passions < MinPassions)
             {
                 return $"skills ({passions} passions only)";

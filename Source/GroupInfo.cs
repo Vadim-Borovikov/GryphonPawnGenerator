@@ -6,18 +6,17 @@ namespace GryphonPawnGenerator
 {
     internal sealed class GroupInfo
     {
-        public readonly string Names;
-        public readonly decimal Competency;
-
         private readonly IList<Pawn> _members;
-        private readonly Dictionary<string, bool> _skills = new Dictionary<string, bool>();
+        private readonly Dictionary<string, bool> _skills;
+        private readonly string _names;
+        private readonly decimal _competency;
 
         private GroupInfo(IList<Pawn> pawns)
         {
             _members = pawns;
             if (_members.Count < 2)
             {
-                Competency = 0;
+                _competency = 0;
                 return;
             }
 
@@ -25,12 +24,7 @@ namespace GryphonPawnGenerator
             {
                 PawnInfo info1 = PawnInfo.GetOrCreate(_members[0]);
                 PawnInfo info2 = PawnInfo.GetOrCreate(_members[1]);
-                foreach (string skill in info1.Skills.Keys)
-                {
-                    _skills[skill] = (info1.Skills[skill] > SkillsHelper.State.None)
-                                    && (info2.Skills[skill] > SkillsHelper.State.None)
-                                    && (info1.Skills[skill] is SkillsHelper.State.Passion || info2.Skills[skill] is SkillsHelper.State.Passion);
-                }
+                _skills = SkillsHelper.GetPairSkills(info1.Skills, info2.Skills);
             }
             else
             {
@@ -49,17 +43,49 @@ namespace GryphonPawnGenerator
                     }
                 }
 
+                _skills = new Dictionary<string, bool>();
                 foreach (string skill in pairInfos[0]._skills.Keys)
                 {
                     _skills[skill] = pairInfos.Any(p => p._skills[skill]);
                 }
             }
 
-            Names = string.Join(", ", _members.Select(p => p.Name.ToStringShort).OrderBy(n => n));
-            Competency = _skills.Values.Count(o => o) * 1m / _skills.Count;
+            _names = string.Join(", ", _members.Select(p => p.Name.ToStringShort).OrderBy(n => n));
+            _competency = _skills.Values.Count(o => o) * 1m / _skills.Count;
         }
 
-        public GroupInfo Try(Pawn candidate)
+        public static string GetTeamInfo()
+        {
+            GroupInfo best = GetBestTeam(Find.GameInitData.startingAndOptionalPawns);
+
+            return best is null
+                ? "No team found"
+                : $"Best team with {best._competency:0%}: {best._names}";
+        }
+
+        private static GroupInfo GetBestTeam(IReadOnlyCollection<Pawn> set)
+        {
+            if (set.Count < TeamSize)
+            {
+                return null;
+            }
+
+            GroupInfo result = GroupInfo.GetOrCreate(set.Take(TeamSize).ToList());
+            if (set.Count == TeamSize)
+            {
+                return result;
+            }
+
+            // ReSharper disable once LoopCanBeConvertedToQuery
+            foreach (Pawn candidate in set.Skip(TeamSize))
+            {
+                result = result.Try(candidate);
+            }
+
+            return result;
+        }
+
+        private GroupInfo Try(Pawn candidate)
         {
             GroupInfo best = this;
 
@@ -69,7 +95,7 @@ namespace GryphonPawnGenerator
                 newGroup.Remove(member);
                 newGroup.Add(candidate);
                 GroupInfo info = GetOrCreate(newGroup);
-                if (info.Competency > best.Competency)
+                if (info._competency > best._competency)
                 {
                     best = info;
                 }
@@ -78,7 +104,7 @@ namespace GryphonPawnGenerator
             return best;
         }
 
-        public static GroupInfo GetOrCreate(IList<Pawn> pawns)
+        private static GroupInfo GetOrCreate(IList<Pawn> pawns)
         {
             if (pawns is null)
             {
@@ -109,5 +135,6 @@ namespace GryphonPawnGenerator
         }
 
         private static readonly Dictionary<string, GroupInfo> All = new Dictionary<string, GroupInfo>();
+        private const int TeamSize = 3;
     }
 }

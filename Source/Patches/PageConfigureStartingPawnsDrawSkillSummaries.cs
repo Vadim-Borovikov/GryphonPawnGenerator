@@ -27,7 +27,7 @@ namespace GryphonPawnGenerator.Patches
 
                 Rect label = section.ContractedBy(7f);
                 label = new Rect(label.min, new Vector2(label.width, 400f));
-                string info = SkillsHelper.GetTeamInfo();
+                string info = GroupInfo.GetTeamInfo();
                 Widgets.Label(label, info);
             }
             catch (Exception e)

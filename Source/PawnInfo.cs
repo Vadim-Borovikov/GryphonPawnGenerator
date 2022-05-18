@@ -1,21 +1,14 @@
 ﻿using System.Collections.Generic;
-using RimWorld;
+using System.Linq;
 using Verse;
 
 namespace GryphonPawnGenerator
 {
     internal sealed class PawnInfo
     {
-        public readonly Dictionary<string, SkillsHelper.State> Skills = new Dictionary<string, SkillsHelper.State>();
+        public readonly Dictionary<string, SkillsHelper.State> Skills;
 
-        private PawnInfo(List<SkillRecord> skills)
-        {
-            foreach (SkillRecord record in skills)
-            {
-                string skill = record.def.defName;
-                Skills[skill] = SkillsHelper.State.None;
-            }
-        }
+        private PawnInfo(Dictionary<string, SkillsHelper.State> skills) => Skills = skills;
 
         public static PawnInfo GetOrCreate(Pawn pawn)
         {
@@ -26,7 +19,9 @@ namespace GryphonPawnGenerator
 
             if (!All.ContainsKey(pawn.ThingID))
             {
-                All[pawn.ThingID] = new PawnInfo(pawn.skills.skills);
+                Dictionary<string, SkillsHelper.State> skills =
+                    pawn.skills.skills.ToDictionary(r => r.def.defName, r => default(SkillsHelper.State));
+                All[pawn.ThingID] = new PawnInfo(skills);
             }
             return All[pawn.ThingID];
         }
