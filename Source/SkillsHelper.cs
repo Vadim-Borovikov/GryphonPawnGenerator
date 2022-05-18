@@ -43,6 +43,37 @@ namespace GryphonPawnGenerator
             }
         }
 
+        public static string GetTeamInfo()
+        {
+            GroupInfo best = GetBestTeam(Find.GameInitData.startingAndOptionalPawns);
+
+            return best is null
+                ? "No team found"
+                : $"Best team with {best.Competency:0%}: {best.Names}";
+        }
+
+        private static GroupInfo GetBestTeam(IReadOnlyCollection<Pawn> set)
+        {
+            if (set.Count < TeamSize)
+            {
+                return null;
+            }
+
+            GroupInfo result = GroupInfo.GetOrCreate(set.Take(TeamSize).ToList());
+            if (set.Count == TeamSize)
+            {
+                return result;
+            }
+
+            // ReSharper disable once LoopCanBeConvertedToQuery
+            foreach (Pawn candidate in set.Skip(TeamSize))
+            {
+                result = result.Try(candidate);
+            }
+
+            return result;
+        }
+
         private static readonly Dictionary<string, string> SkillBlockingTraits = new Dictionary<string, string>
         {
             { "brawler", "Shooting" },
@@ -54,5 +85,6 @@ namespace GryphonPawnGenerator
         };
 
         private const int MinProficiencySkillLevel = 3;
+        private const int TeamSize = 3;
     }
 }

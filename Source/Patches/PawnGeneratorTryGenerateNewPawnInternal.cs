@@ -4,11 +4,11 @@ using JetBrains.Annotations;
 using RimWorld;
 using Verse;
 
-namespace GryphonPawnGenerator
+namespace GryphonPawnGenerator.Patches
 {
     // Token: 0x020002EF RID: 751
     [HarmonyPatch(typeof(PawnGenerator), "TryGenerateNewPawnInternal")]
-    public static class PatchPawnGeneratorTryGenerateNewPawnInternal
+    public static class PawnGeneratorTryGenerateNewPawnInternal
     {
         // Token: 0x06001514 RID: 5396 RVA: 0x0007B1DC File Offset: 0x000793DC
         // ReSharper disable once InconsistentNaming
@@ -33,14 +33,14 @@ namespace GryphonPawnGenerator
                     return;
                 }
 
-                PawnInfo.All.Remove(__result.ThingID);
+                PawnInfo.Remove(__result);
                 // string name = __result.Name.ToStringFull ?? "<Empty>";
                 // Log.Message($"{name} rejected: {error}");
                 __result = null;
             }
             catch (Exception e)
             {
-                Log.Message($"My error {e}!!");
+                Log.Message($"My error {e} in {nameof(PawnGeneratorTryGenerateNewPawnInternal)}!!");
                 throw;
             }
         }

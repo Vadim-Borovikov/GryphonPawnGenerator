@@ -17,15 +17,33 @@ namespace GryphonPawnGenerator
             }
         }
 
-        public static readonly Dictionary<string, PawnInfo> All = new Dictionary<string, PawnInfo>();
-
         public static PawnInfo GetOrCreate(Pawn pawn)
         {
+            if (pawn is null)
+            {
+                return null;
+            }
+
             if (!All.ContainsKey(pawn.ThingID))
             {
                 All[pawn.ThingID] = new PawnInfo(pawn.skills.skills);
             }
             return All[pawn.ThingID];
         }
+
+        public static void Remove(Pawn pawn)
+        {
+            if (pawn is null)
+            {
+                return;
+            }
+
+            if (All.ContainsKey(pawn.ThingID))
+            {
+                All.Remove(pawn.ThingID);
+            }
+        }
+
+        private static readonly Dictionary<string, PawnInfo> All = new Dictionary<string, PawnInfo>();
     }
 }
