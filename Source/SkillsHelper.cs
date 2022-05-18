@@ -50,7 +50,7 @@ namespace GryphonPawnGenerator
             { "annoying voice", "Social" },
             { "creepy breathing", "Social" },
             { "ugly", "Social" },
-            { "staggeringly ugly", "Social" },
+            { "staggeringly ugly", "Social" }
         };
 
         private const int MinProficiencySkillLevel = 3;
