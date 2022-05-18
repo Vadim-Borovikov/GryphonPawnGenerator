@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using RimWorld;
 using Verse;
 
 namespace GryphonPawnGenerator
@@ -10,8 +8,6 @@ namespace GryphonPawnGenerator
     {
         public static bool Check(Pawn pawn, out string error)
         {
-            ScanTraits(pawn);
-
             List<Func<Pawn, string>> checks = new List<Func<Pawn, string>>
             {
                 CheckStory,
@@ -52,52 +48,20 @@ namespace GryphonPawnGenerator
             return null;
         }
 
-        private static void ScanTraits(Pawn pawn)
+        private static string CheckTraits(Pawn pawn)
         {
             PawnInfo info = PawnInfo.GetOrCreate(pawn);
-            _traitError = null;
-
-            foreach (Trait trait in pawn.story.traits.allTraits)
-            {
-                TraitDegreeData degreeData = trait.Degree == 0
-                    ? trait.def.degreeDatas.FirstOrDefault()
-                    : trait.def.degreeDatas.FirstOrDefault(d => d.degree == trait.Degree);
-                if (degreeData is null)
-                {
-                    _traitError = $"no degree data in trait ({trait.def.defName})!";
-                    return;
-                }
-
-                string traitName = degreeData.untranslatedLabel;
-                if (BlockedTraits.Contains(traitName))
-                {
-                    _traitError = trait.def.degreeDatas.Count < 2
-                        ? trait.def.defName
-                        : $"{trait.def.defName} - {traitName}";
-                    return;
-                }
-
-                SkillsHelper.RegisterSkillIfBlocked(info.Skills, traitName);
-            }
+            return info.TraitError;
         }
-
-        private static string CheckTraits(Pawn pawn) => _traitError;
 
         private static string CheckSkills(Pawn pawn)
         {
             PawnInfo info = PawnInfo.GetOrCreate(pawn);
-            SkillsHelper.FillSkills(pawn.skills.skills, info.Skills);
 
-            int proficiencies = SkillsHelper.GetProficienciesAmount(info.Skills);
-            if (proficiencies < MinProficiencies)
+            if ((info.Skills["Shooting"] <= SkillsHelper.State.None) &&
+                (info.Skills["Melee"] <= SkillsHelper.State.None))
             {
-                return $"skills ({proficiencies} proficiencies only)";
-            }
-
-            int passions = SkillsHelper.GetPassionsAmount(info.Skills);
-            if (passions < MinPassions)
-            {
-                return $"skills ({passions} passions only)";
+                return "skills (can't fight properly)";
             }
 
             return null;
@@ -126,26 +90,7 @@ namespace GryphonPawnGenerator
             WorkTags.Hauling
         };
 
-        private static readonly List<string> BlockedTraits = new List<string>
-        {
-            "bloodlust",
-            "psychopath",
-            "cannibal",
-            "slow learner",
-            "body purist",
-            "misandrist",
-            "misogynist",
-            "slowpoke",
-            "chemical fascination",
-            "chemical interest",
-            "depressive",
-            "lazy",
-            "slothful",
-        };
-
-        private const int MinProficiencies = 8;
-        private const int MinPassions = 4;
-
-        private static string _traitError;
+        // private const int MinProficiencies = 8;
+        // private const int MinPassions = 4;
     }
 }

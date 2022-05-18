@@ -19,16 +19,24 @@ namespace GryphonPawnGenerator.Patches
         {
             try
             {
-                Rect section = rect;
-                section.y += 75f;
-                section.yMax += 10f;
-                section.xMax += 445f;
-                Widgets.DrawMenuSection(section);
+                TeamInfo info = GroupInfo.GetTeamInfo();
+                if (info.Worst is null)
+                {
+                    Rect section = rect;
+                    section.y += 75f;
+                    section.yMax += 10f;
+                    section.xMax += 300f;
+                    Widgets.DrawMenuSection(section);
 
-                Rect label = section.ContractedBy(7f);
-                label = new Rect(label.min, new Vector2(label.width, 400f));
-                string info = GroupInfo.GetTeamInfo();
-                Widgets.Label(label, info);
+                    Rect label = section.ContractedBy(7f);
+                    label = new Rect(label.min, new Vector2(label.width, 200f));
+                    Widgets.Label(label, info.Message);
+                }
+                else
+                {
+                    __instance.SelectPawn(info.Worst);
+                    StartingPawnUtility.RandomizeInPlace(info.Worst);
+                }
             }
             catch (Exception e)
             {

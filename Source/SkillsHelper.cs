@@ -23,32 +23,28 @@ namespace GryphonPawnGenerator
             }
         }
 
-        public static void FillSkills(IEnumerable<SkillRecord> source, Dictionary<string, State> target)
+        public static Dictionary<string, State> GetSkills(ICollection<SkillRecord> source)
         {
-            List<SkillRecord> proficientIn = source.Where(s => target[s.def.defName] != State.Blocked)
-                                                   .Where(s => s.Level >= MinProficiencySkillLevel).ToList();
-            foreach (SkillRecord skill in proficientIn)
+            Dictionary<string, State> result = new Dictionary<string, State>();
+
+            foreach (string skill in source.Select(s => s.def.defName))
             {
-                string name = skill.def.defName;
-                target[name] = State.Proficiency;
+                result[skill] = State.None;
             }
 
-            List<SkillRecord> passionateAbout = proficientIn.Where(s => s.passion != Passion.None).ToList();
-            foreach (SkillRecord skill in passionateAbout)
+            List<SkillRecord> proficientIn = source.Where(s => s.Level >= MinProficiencySkillLevel).ToList();
+            foreach (string skill in proficientIn.Select(s => s.def.defName))
             {
-                string name = skill.def.defName;
-                target[name] = State.Passion;
+                result[skill] = State.Proficiency;
             }
-        }
 
-        public static int GetProficienciesAmount(Dictionary<string, State> skills)
-        {
-            return skills.Values.Count(s => s > State.None);
-        }
+            IEnumerable<SkillRecord> passionateAbout = proficientIn.Where(s => s.passion != Passion.None);
+            foreach (string skill in passionateAbout.Select(s => s.def.defName))
+            {
+                result[skill] = State.Passion;
+            }
 
-        public static int GetPassionsAmount(Dictionary<string, State> skills)
-        {
-            return skills.Values.Count(s => s == State.Passion);
+            return result;
         }
 
         public static Dictionary<string, bool> GetPairSkills(Dictionary<string, State> skills1,
@@ -57,13 +53,53 @@ namespace GryphonPawnGenerator
             Dictionary<string, bool> result = new Dictionary<string, bool>();
             foreach (string skill in skills1.Keys)
             {
-                result[skill] = (skills1[skill] > State.None) &&
-                                (skills2[skill] > State.None) &&
-                                (skills1[skill] is State.Passion || skills2[skill] is State.Passion);
+                result[skill] = skills1[skill] is State.Passion || skills2[skill] is State.Passion;
+                if (skill != "Melee")
+                {
+                    result[skill] &= (skills1[skill] > State.None) && (skills2[skill] > State.None);
+                }
             }
             return result;
         }
 
+        public static int GetCompatitiveValue(Dictionary<string, State> skills, List<Dictionary<string, State>> others)
+        {
+            int result = 0;
+            foreach (string skill in skills.Keys)
+            {
+                switch (skills[skill])
+                {
+                    case State.Blocked:
+                    case State.None:
+                        continue;
+                    case State.Proficiency:
+                        foreach (Dictionary<string, State> set in others)
+                        {
+                            if ((skill != "Melee") && (set[skill] < State.Proficiency))
+                            {
+                                ++result;
+                            }
+                        }
+                        break;
+                    case State.Passion:
+                        foreach (Dictionary<string, State> set in others)
+                        {
+                            if (((skill == "Melee") && (set[skill] < State.Passion))
+                                || (set[skill] < State.Proficiency))
+                            {
+                                result += 2;
+                            }
+                            else if (set[skill] == State.Proficiency)
+                            {
+                                ++result;
+                            }
+                        }
+                        break;
+                }
+            }
+
+            return result;
+        }
 
         private static readonly Dictionary<string, string> SkillBlockingTraits = new Dictionary<string, string>
         {

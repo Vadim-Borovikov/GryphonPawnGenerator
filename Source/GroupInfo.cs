@@ -54,13 +54,27 @@ namespace GryphonPawnGenerator
             _competency = _skills.Values.Count(o => o) * 1m / _skills.Count;
         }
 
-        public static string GetTeamInfo()
+        public static TeamInfo GetTeamInfo()
         {
-            GroupInfo best = GetBestTeam(Find.GameInitData.startingAndOptionalPawns);
+            List<Pawn> team = Find.GameInitData.startingAndOptionalPawns;
+            GroupInfo best = GetBestTeam(team);
+            string message;
+            if (best is null)
+            {
+                message = "No team found";
+                return new TeamInfo(message, null);
+            }
 
-            return best is null
-                ? "No team found"
-                : $"Best team with {best._competency:0%}: {best._names}";
+            if (best._competency < 1)
+            {
+                Pawn worst = GetWorstPawn(team);
+                PawnInfo info = PawnInfo.GetOrCreate(worst);
+                message = $"Best team with {best._competency:0%}: {best._names}. {info.Name} should go.";
+                return new TeamInfo(message, worst);
+            }
+
+            message = $"Perfect team found! {best._names}";
+            return new TeamInfo(message, null);
         }
 
         private static GroupInfo GetBestTeam(IReadOnlyCollection<Pawn> set)
@@ -70,7 +84,7 @@ namespace GryphonPawnGenerator
                 return null;
             }
 
-            GroupInfo result = GroupInfo.GetOrCreate(set.Take(TeamSize).ToList());
+            GroupInfo result = GetOrCreate(set.Take(TeamSize).ToList());
             if (set.Count == TeamSize)
             {
                 return result;
@@ -83,6 +97,28 @@ namespace GryphonPawnGenerator
             }
 
             return result;
+        }
+
+        private static Pawn GetWorstPawn(ICollection<Pawn> set)
+        {
+            List<PawnInfo> infos = set.Select(PawnInfo.GetOrCreate).ToList();
+            Pawn worst = null;
+            int worstValue = -1;
+
+            foreach (Pawn pawn in set)
+            {
+                PawnInfo info = PawnInfo.GetOrCreate(pawn);
+                int value = SkillsHelper.GetCompatitiveValue(info.Skills, infos.Where(i => i != info)
+                                                                               .Select(i => i.Skills)
+                                                                               .ToList());
+                if (worst is null || (value < worstValue))
+                {
+                    worst = pawn;
+                    worstValue = value;
+                }
+            }
+
+            return worst;
         }
 
         private GroupInfo Try(Pawn candidate)
